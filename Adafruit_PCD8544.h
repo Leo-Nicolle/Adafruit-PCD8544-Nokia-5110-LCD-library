@@ -79,7 +79,7 @@ class Adafruit_PCD8544 : public Adafruit_GFX {
   Adafruit_PCD8544(int8_t SCLK, int8_t DIN, int8_t DC, int8_t RST);
   // Hardware SPI based on hardware controlled SCK (SCLK) and MOSI (DIN) pins. CS is still controlled by any IO pin.
   // NOTE: MISO and SS will be set as an input and output respectively, so be careful sharing those pins!
-  Adafruit_PCD8544(int8_t DC, int8_t CS, int8_t RST,);
+  Adafruit_PCD8544(int8_t DC, int8_t CS, int8_t RST);
 
   int8_t backlightPin;
   void begin(uint8_t contrast = 40, uint8_t bias = 0x04);
@@ -90,7 +90,9 @@ class Adafruit_PCD8544 : public Adafruit_GFX {
   void setContrast(uint8_t val);
   void clearDisplay(void);
   void display();
-
+  void powerSaving(boolean i);
+  void setBacklightPin(uint8_t pin);
+  void setBacklight(uint8_t val);
   void drawPixel(int16_t x, int16_t y, uint16_t color);
   uint8_t getPixel(int8_t x, int8_t y);
 

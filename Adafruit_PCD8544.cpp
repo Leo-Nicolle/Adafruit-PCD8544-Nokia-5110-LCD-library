@@ -36,11 +36,12 @@ All text above, and the splash screen below must be included in any redistributi
 
 #include <Adafruit_GFX.h>
 #include "Adafruit_PCD8544.h"
-
+#ifndef _BV
+  #define _BV(bit) (1<<(bit))
+#endif
 // If the SPI library has transaction support, these functions
 // establish settings and protect from interference from other
 // libraries.  Otherwise, they simply do nothing.
-#ifdef SPI_HAS_TRANSACTION
 SPISettings spiSettings = SPISettings(PCD8544_SPI_CLOCK_DIV, MSBFIRST, SPI_MODE0);
 static inline void spi_begin(void) __attribute__((always_inline));
 static inline void spi_begin(void) {
@@ -50,10 +51,6 @@ static inline void spi_end(void) __attribute__((always_inline));
 static inline void spi_end(void) {
   SPI.endTransaction();
 }
-#else
-#define spi_begin()
-#define spi_end()
-#endif
 
 // the memory buffer for the LCD
 uint8_t pcd8544_buffer[LCDWIDTH * LCDHEIGHT / 8] = {
@@ -101,84 +98,6 @@ uint8_t pcd8544_buffer[LCDWIDTH * LCDHEIGHT / 8] = {
 static uint8_t xUpdateMin, xUpdateMax, yUpdateMin, yUpdateMax;
 #endif
 
-void Adafruit_PCD8544::scroll(uint8_t direction, uint8_t pixels){
-  uint8_t oldpixels;
-  uint8_t newpixels;
-  int i, j;
-  if (pixels==0) {
-    return;
-  }
-  switch(direction){
-    case SCROLL_DOWN:
-      if (pixels>7) {
-          if (pixels>=LCDHEIGHT) {
-            memset(pcd8544_buffer, 0, LCDWIDTH*LCDHEIGHT/8);
-            return;
-          }
-        memmove(&pcd8544_buffer[LCDWIDTH*((pixels)>>3)],&pcd8544_buffer[0],LCDWIDTH*((LCDHEIGHT-pixels)>>3));
-        memset(pcd8544_buffer, 0, LCDWIDTH*((pixels)>>3));
-      }
-      if (pixels % 8 != 0) {
-        for (i=0;i<LCDWIDTH;i++) {
-          newpixels = 0;
-          for (j=0;j<LCDHEIGHT/8;j++) {
-            oldpixels = pcd8544_buffer[i+j*LCDWIDTH]>>(8-(pixels % 8));
-            pcd8544_buffer[i+j*LCDWIDTH] = (pcd8544_buffer[i+j*LCDWIDTH] << (pixels % 8))|newpixels;
-            newpixels=oldpixels;
-          }
-        }
-      }
-      break;
-    case SCROLL_UP:
-      if (pixels>7) {
-          if (pixels>=LCDHEIGHT) {
-            memset(pcd8544_buffer, 0, LCDWIDTH*LCDHEIGHT/8);
-            return;
-          }
-        memmove(&pcd8544_buffer[LCDWIDTH*((pixels)>>3)],&pcd8544_buffer[0],LCDWIDTH*((LCDHEIGHT-pixels)>>3));
-        memset(pcd8544_buffer, 0, LCDWIDTH*((pixels)>>3));
-      }
-      if (pixels % 8 != 0) {
-        for (i=0;i<LCDWIDTH;i++) {
-          newpixels = 0;
-          for (j=0;j<LCDHEIGHT/8;j++) {
-            oldpixels = pcd8544_buffer[i+(LCDHEIGHT/8-1-j)*LCDWIDTH] << (8-(pixels % 8));
-            pcd8544_buffer[i+(LCDHEIGHT/8-1-j)*LCDWIDTH] = (pcd8544_buffer[i+(LCDHEIGHT/8-1-j)*LCDWIDTH] >> (pixels % 8))|newpixels;
-            newpixels=oldpixels;
-          }
-        }
-      }
-      break;
-    case SCROLL_LEFT:
-      if (pixels>=LCDWIDTH) {
-      memset(pcd8544_buffer, 0, LCDWIDTH*LCDHEIGHT/8);
-      return;
-      }
-      for (i=0;i<LCDHEIGHT/8;i++) {
-        memmove(&pcd8544_buffer[i*LCDWIDTH],&pcd8544_buffer[i*LCDWIDTH+pixels],LCDWIDTH-pixels);
-        memset(&pcd8544_buffer[i*LCDWIDTH-pixels], 0, pixels);
-      }
-      for(i=0; i<pixels; i++) Adafruit_GFX::drawFastVLine(LCDWIDTH - i - 1, 0, LCDHEIGHT, 0);
-      break;
-    case SCROLL_RIGHT:
-      if (pixels>=LCDWIDTH) {
-        memset(pcd8544_buffer, 0, LCDWIDTH*LCDHEIGHT/8);
-        return;
-        }
-      for (i=0;i<LCDHEIGHT/8;i++) {
-        memmove(&pcd8544_buffer[i*LCDWIDTH+pixels],&pcd8544_buffer[i*LCDWIDTH],LCDWIDTH-pixels);
-        memset(&pcd8544_buffer[(i+1)*LCDWIDTH-pixels], 0, pixels);
-      }
-      for(i=0; i<pixels; i++) Adafruit_GFX::drawFastVLine(i, 0, LCDHEIGHT, 0);
-      break;
-    default:
-      break;
-  }
-}
-
-uint8_t * Adafruit_PCD8544::getPixelBuffer(){
-  return (uint8_t *) &pcd8544_buffer;
-}
 
 void Adafruit_PCD8544::powerSaving(boolean i) {
   if(!i){
@@ -377,7 +296,7 @@ inline void Adafruit_PCD8544::spiWrite(uint8_t d) {
 }
 
 bool Adafruit_PCD8544::isHardwareSPI() {
-  return (_din == -1 && _sclk == -1);
+  return 1;
 }
 
 void Adafruit_PCD8544::command(uint8_t c) {
@@ -467,13 +386,6 @@ void Adafruit_PCD8544::clearDisplay(void) {
   memset(pcd8544_buffer, 0, LCDWIDTH*LCDHEIGHT/8);
   updateBoundingBox(0, 0, LCDWIDTH-1, LCDHEIGHT-1);
   cursor_y = cursor_x = 0;
-}
-
-void Adafruit_PCD8544::invertDisplay(boolean i) {
-  if (isHardwareSPI()) spi_begin();
-  command(PCD8544_FUNCTIONSET);
-  command(PCD8544_DISPLAYCONTROL | (i ? PCD8544_DISPLAYINVERTED : PCD8544_DISPLAYNORMAL));
-  if (isHardwareSPI()) spi_end();
 }
 
 /*
